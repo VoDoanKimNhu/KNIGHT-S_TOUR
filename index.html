@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BT3-Knight's Tour</title>
+    <style>
+        .main{
+            justify-content: center;
+            display: flex;
+        }
+        i{
+            display: block;
+            text-align: center;
+            font-size: 30px;
+        }
+    </style>
+</head>
+<body>
+    <div class="main">
+        <svg id="chessBoard_svg" height="660" width="660">
+            <rect id="chessBoard_rect" x=10 y=10 height=640 width=640 fill=black stroke=black></rect>
+        </svg>
+
+        <script>
+            drawChessBoard();
+
+            function drawChessBoard(){
+                let svg_obj = document.querySelector('#chessBoard_svg');
+                
+                color = -1;
+                for(let i=0; i<64; i++){
+                    // new group
+                    let newGroup = document.createElementNS('http://www.w3.org/2000/svg', "g");
+                    newGroup.setAttribute("transform", "translate(0)");
+                    svg_obj.append(newGroup);
+
+                    let svg_group = document.getElementsByTagName("g")[i];
+
+                    // new rect in group
+                    if(i%8 == 0) color = -color;
+                    let newRect = document.createElementNS('http://www.w3.org/2000/svg', "rect");
+                    newRect.setAttribute("onclick", "trace(this);");
+                    newRect.setAttribute("x", 10+80*(i%8));
+                    newRect.setAttribute("y", 10+80*(i-i%8)/8);
+                    newRect.setAttribute("height", 80);
+                    newRect.setAttribute("width", 80);
+                    if(color == 1)
+                        newRect.setAttribute("style", "stroke: black; fill: white;");
+                    else
+                        newRect.setAttribute("style", "stroke: black; fill: gray;");
+                    
+                    color = -color;
+                    svg_group.append(newRect);
+
+                    // new text in group
+                    let newText = document.createElementNS('http://www.w3.org/2000/svg', "text");
+                    newText.setAttribute("id", i);
+                    newText.setAttribute("x", " ");
+                    newText.setAttribute("y", " ");
+                    newText.setAttribute("style", "alignment-baseline: middle; text-anchor: middle;");
+                    svg_group.append(newText);
+                }
+            }
+                
+            // init next step through 2 arrays next_x, next_y
+            let next_x = [2, -2, -2, -1, -1, 1, 1, 2];
+            let next_y = [1, -1, 1, -2, 2, 2, -2, -1];
+
+            // step board 
+            board = new Array();
+
+            function trace(rect){
+                // coordinate of rect on svg
+                let co_x = rect.getAttribute('x');
+                let co_y = rect.getAttribute('y');
+
+                // coordinate of rect on chessboard
+                let box = {
+                    x: (co_x-10)/80,
+                    y: (co_y-10)/80,
+                };
+
+                // init step board
+                initStepBoard(board);
+                board[box.x+8*box.y] = 1;
+
+                // trace
+                let OK = {check: 0};
+                try_trace(board, box, OK);
+                if(!try_trace(board, box, OK)) alert("Not found Knight's tour!");
+
+                // insert text and draw line
+                for(let i=1; i<=64; i++){
+                    let chessboard = document.getElementById("chessboard_rect");
+
+                    let idx_board_i = board.findIndex(board => board==i);
+                    let x1 = idx_board_i%8;
+                    let y1 = (idx_board_i-idx_board_i%8)/8;
+
+                    let box_res = document.getElementById(x1+8*y1);
+                    box_res.setAttribute('x', x1*80+10+20);
+                    box_res.setAttribute('y', y1*80+10+20);
+                    box_res.style.fontSize = 25;
+                    box_res.style.opacity = 0.7;
+                    box_res.innerHTML = i;
+
+                    if(i<64){
+                        let idx_board_ii = board.findIndex(board_1 => board_1==i+1);
+                        let x2 = idx_board_ii%8;
+                        let y2 = (idx_board_ii-idx_board_ii%8)/8;
+
+                        let svg_group = document.getElementById("chessBoard_svg");
+                        
+                        let newLine=document.createElementNS('http://www.w3.org/2000/svg', "line");
+                        newLine.setAttribute("x1", x1*80+10+40);
+                        newLine.setAttribute("y1", y1*80+10+40);
+                        newLine.setAttribute("x2", x2*80+10+40);
+                        newLine.setAttribute("y2", y2*80+10+40);
+                        newLine.setAttribute("style", "stroke: black; stroke-width: 2px;");
+                        svg_group.append(newLine);
+                    }
+                }
+
+                return true;
+            }
+
+            function initStepBoard(board){
+                for(let i=0; i<64; i++)
+                    board[i] = 0;
+            }
+
+            function checkCoordinate(x, y){
+                return (x>=0 && x<8 && y>=0 && y<8);
+            }
+
+            function getDegree(board, x, y){
+                let count = 0;
+
+                for(let i=0; i<8; i++){
+                    if(checkCoordinate(x+next_x[i], y+next_y[i]) && board[x+next_x[i]+8*(y+next_y[i])] == 0){
+                        count++;
+                    }
+                }
+                return count;
+            }
+
+            function try_trace(board, box, OK){
+                let min_deg_inx = -1, min_deg = 9, x_next, y_next;
+                let x_pre = box.x, y_pre = box.y;
+
+                // find Warndoff index
+                for(let i=0; i<8; i++){
+                    x_next = box.x+next_x[i];
+                    y_next = box.y+next_y[i];
+                    if(checkCoordinate(x_next, y_next) && board[x_next+8*y_next]==0 && getDegree(board, x_next, y_next)<min_deg){
+                        min_deg_inx = i;
+                        min_deg = getDegree(board, x_next, y_next);
+                    }
+                }
+
+                if(min_deg_inx != -1){
+                    for(let i=0; i<8; i++){
+                        x_next = box.x+next_x[(i+min_deg_inx)%8];
+                        y_next = box.y+next_y[(i+min_deg_inx)%8];
+
+                        if(checkCoordinate(x_next, y_next) && board[x_next+8*y_next]==0){
+                            box.x = x_next;
+                            box.y = y_next;
+                            board[box.x+8*box.y] = board[x_pre+8*y_pre] + 1;
+                            
+                            if(Math.max(...board) == 64){
+                                OK.check = 1;
+                                return true;
+                            }else{
+                                try_trace(board, box, OK);
+
+                                if(!OK.check){
+                                    let temp = board[box.x+8*box.y] - 1;
+                                    if(temp<1) return false;
+
+                                    board[box.x + 8*box.y] = 0;
+                                    let temp_co = board.findIndex(board => board==temp);
+                                    box.x = temp_co%8;
+                                    box.y = (temp_co-temp_co%8)/8;
+                                }
+                            }
+                        }
+                    }
+                }
+                return true;
+            }
+        </script>
+    </div>
+    <b><i>Click on the box to find Knight's tour!</i></b>
+    <!-- <button onclick="clear();">Clear ChessBoard</button> -->
+</body>
+</html>
